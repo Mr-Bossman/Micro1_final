@@ -1,11 +1,21 @@
-#include <stdio.h>
+//-gdwarf-4 -g -o output.s -fno-verbose-asm -S -target arm-linux-gnueabi --gcc-toolchain=/opt/compiler-explorer/arm/gcc-12.2.0/arm-unknown-linux-gnueabi --sysroot=/opt/compiler-explorer/arm/gcc-12.2.0/arm-unknown-linux-gnueabi/arm-unknown-linux-gnueabi/sysroot -fcolor-diagnostics -fno-crash-diagnostics -Os -nostdlib -mcpu=cortex-m0 -mthumb -mfloat-abi=soft -ffreestanding example.c
+//-g -o output.s -fno-verbose-asm -S -Os -nostdlib -mcpu=cortex-m0 -mthumb -mfloat-abi=soft -ffreestanding example.c
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+
+#if 0
+
+#define size_t unsigned int
+void print_slowed(const char *str, size_t len);
+int get_button(int c);
+
+#else
+#include <stdio.h>
 #include "pico/stdlib.h"
 
-static void print_slowed(const char *str, size_t len) {
+void print_slowed(const char *str, size_t len) {
 	if (len == 0)
 		len = -1;
 	while (*str && len--) {
@@ -14,6 +24,35 @@ static void print_slowed(const char *str, size_t len) {
 		sleep_ms(1);
 		str++;
 	}
+}
+
+int get_button(int c) {
+	while (true) {
+		int ch = getchar();
+		if (ch <= 0)
+			continue;
+		//while (ch != '\n' && getchar() != '\n');
+		if (c == 0)
+			return ch;
+		if (c == ch)
+			return 1;
+	}
+}
+#endif
+
+static inline void* memset(void * dest, int val, size_t len) {
+	register unsigned char *ptr = (unsigned char*)dest;
+	while (len-- > 0)
+		*ptr++ = val;
+	return dest;
+}
+
+static inline void* memcpy(void *dest, const void *src, size_t len) {
+	char *d = dest;
+	const char *s = src;
+	while (len--)
+		*d++ = *s++;
+	return dest;
 }
 
 static int lcd_int(int col, int line, const char *str, bool clear, bool display);
@@ -33,7 +72,7 @@ static inline int calculate_lcd(int col, int line, const char *str) {
 
 //emulate the lcd screen
 static int lcd_int(int col, int line, const char *str, bool clear, bool display) {
-	static char lcd[2][17] = {0};
+	static char lcd[2][16] = {0};
 	int i = 0, skip = 0, c = 0, l = 0;
 
 	if (clear)
@@ -80,32 +119,20 @@ static int lcd_int(int col, int line, const char *str, bool clear, bool display)
 	}
 	if (display) {
 		// 0x0C or 0o014 clears the screen
-		printf("\033[H\033[2J\033[3J");
-		printf("%.16s\r\n", lcd[0]);
-		printf("%.16s\r\n", lcd[1]);
-		print_slowed("\n\n\r\014", 0);
+		print_slowed("\033[H\033[2J\033[3J", 0);
+		print_slowed(lcd[0], 16);
+		print_slowed("\r\n", 0);
+		print_slowed(lcd[1], 16);
+		print_slowed("\r\n\n\n\r\014", 0);
 		print_slowed(lcd[0], 16);
 		if(!lcd[0][15])
-			printf("\n");
+			print_slowed("\n", 0);
 		print_slowed(lcd[1], 16);
 	}
 	return i;
 }
 
-int get_button(int c) {
-	while (true) {
-		int ch = getchar();
-		if (ch <= 0)
-			continue;
-		//while (ch != '\n' && getchar() != '\n');
-		if (c == 0)
-			return ch;
-		if (c == ch)
-			return 1;
-	}
-}
-
-int print_text(const char *text) {
+static int print_text(const char *text) {
 	size_t offset = 0;
 	for (int i = 0; text[offset]; i++) {
 		int ret = print_lcd(0, 0, text + offset, true);
@@ -130,6 +157,9 @@ int print_text(const char *text) {
 	return 0;
 }
 
+
+__attribute__((unused))
+static
 int novel(void) {
 	char text[] = "This is a really long string that should be printed on the lcd screen.\n I wonder if new lines work?\n Did they?";
 
