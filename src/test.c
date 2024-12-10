@@ -3,6 +3,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "pico/stdlib.h"
+
+static void print_slowed(const char *str, size_t len) {
+	if (len == 0)
+		len = -1;
+	while (*str && len--) {
+		putchar(*str);
+		fflush(stdout);
+		sleep_ms(1);
+		str++;
+	}
+}
 
 static int lcd_int(int col, int line, const char *str, bool clear, bool display);
 
@@ -21,8 +33,8 @@ static inline int calculate_lcd(int col, int line, const char *str) {
 
 //emulate the lcd screen
 static int lcd_int(int col, int line, const char *str, bool clear, bool display) {
-	static char lcd[2][16] = {0};
-	int i = 0, skip = 0, c , l;
+	static char lcd[2][17] = {0};
+	int i = 0, skip = 0, c = 0, l = 0;
 
 	if (clear)
 		memset(lcd, 0, sizeof(lcd));
@@ -67,9 +79,15 @@ static int lcd_int(int col, int line, const char *str, bool clear, bool display)
 		}
 	}
 	if (display) {
-		printf("\033[2J\n");
-		printf("%.16s\n", lcd[0]);
-		printf("%.16s\n", lcd[1]);
+		// 0x0C or 0o014 clears the screen
+		printf("\033[H\033[2J\033[3J");
+		printf("%.16s\r\n", lcd[0]);
+		printf("%.16s\r\n", lcd[1]);
+		print_slowed("\n\n\r\014", 0);
+		print_slowed(lcd[0], 16);
+		if(!lcd[0][15])
+			printf("\n");
+		print_slowed(lcd[1], 16);
 	}
 	return i;
 }
@@ -77,7 +95,9 @@ static int lcd_int(int col, int line, const char *str, bool clear, bool display)
 int get_button(int c) {
 	while (true) {
 		int ch = getchar();
-		while (ch != '\n' && getchar() != '\n');
+		if (ch <= 0)
+			continue;
+		//while (ch != '\n' && getchar() != '\n');
 		if (c == 0)
 			return ch;
 		if (c == ch)
@@ -91,7 +111,7 @@ int print_text(const char *text) {
 		int ret = print_lcd(0, 0, text + offset, true);
 		if (ret < 0)
 			return ret;
-		printf("On page %d\nPress 's' to skip, 'b' to go back, or any other key to continue\n", i);
+		//printf("On page %d\nPress 's' to skip, 'b' to go back, or any other key to continue\n", i);
 		int ch = get_button(0);
 		if (ch == 's') {
 			offset = 0;
@@ -110,7 +130,7 @@ int print_text(const char *text) {
 	return 0;
 }
 
-int main() {
+int novel(void) {
 	char text[] = "This is a really long string that should be printed on the lcd screen.\n I wonder if new lines work?\n Did they?";
 
 	print_text(text);
