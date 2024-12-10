@@ -15,7 +15,7 @@ int get_button(int c);
 #include <stdio.h>
 #include "pico/stdlib.h"
 
-void print_slowed(const char *str, size_t len) {
+static void print_slowed(const char *str, size_t len) {
 	if (len == 0)
 		len = -1;
 	while (*str && len--) {
@@ -26,7 +26,7 @@ void print_slowed(const char *str, size_t len) {
 	}
 }
 
-int get_button(int c) {
+static int get_button(int c) {
 	while (true) {
 		int ch = getchar();
 		if (ch <= 0)

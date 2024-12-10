@@ -2,6 +2,46 @@
 .syntax unified
 .cpu    cortex-m0
 .globl  novel
+
+print_slowed:
+        push    {r4, r5, r6, lr}
+        movs    r5, r0
+        cmp     r1, #0
+        bne     .L2
+        subs    r1, r1, #1
+.L2:
+        adds    r4, r5, r1
+.L3:
+        ldrb    r0, [r5]
+        cmp     r0, #0
+        beq     .L1
+        cmp     r5, r4
+        bne     .L5
+.L1:
+        pop     {r4, r5, r6, pc}
+.L5:
+        bl      putchar
+        movs    r0, #1
+        bl      sleep_ms
+        adds    r5, r5, #1
+        b       .L3
+
+
+get_button:
+        push    {r4, lr}
+        movs    r4, r0
+.L15:
+        bl      getchar
+        cmp     r0, #0
+        ble     .L15
+        cmp     r4, #0
+        beq     .L10
+        cmp     r0, r4
+        bne     .L15
+        movs    r0, #1
+.L10:
+        pop     {r4, pc}
+
  novel:
         push    {r4, r5, r6, r7, lr}
         sub     sp, #116
